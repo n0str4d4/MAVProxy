@@ -12,9 +12,24 @@ class CanSendModule(mp_module.MPModule):
     def __init__(self,mpstate):
         super(CanSendModule, self).__init__(mpstate,"cansend",public=True)
         self.add_command('cansend', self.send_mavlink_can_msg,"send CAN message over MAVLink")
+        # Register to handle incoming CAN_FRAME messages
+        
+        # self.master.mavlink_callbacks.append(self.handle_can_frame)
+
+        # print(vars(self.master))
+        # print(self.master.__dict__)
+        # print(help(self.master))
 
 
-
+    def idle_task(self):
+        # he idle_task method in the MPModule class is a periodic task that 
+        # can be overridden to check for and handle incoming MAVLink messages.
+        # This function is called periodically to handle incoming messages
+        #print('from within the idle task')
+        msg = self.master.recv_match(type='CAN_FRAME', blocking=True)
+        if msg:
+            self.handle_can_frame(msg)
+    
     def send_mavlink_can_msg(self, args): #args):
         '''send can messages through MAVLink'''
         # if ( len(args) != 2):
@@ -38,6 +53,15 @@ class CanSendModule(mp_module.MPModule):
         )
         print(f"Sent CAN frame with ID {can_id:#x} on bus {bus} with data {data}")
     
+    def handle_can_frame(self, m):
+        print(f"the MAVLink message received is of type {m.get_type()}")
+        # This function is called when a CAN_FRAME message is received
+        if m.get_type() == 'CAN_FRAME':
+            can_id = m.id
+            bus = m.bus
+            data = list(m.data)
+            print(f"Received CAN frame: ID={can_id:#x}, Bus={bus}, Data={data}")
+     
 
 def init(mpstate):
     return CanSendModule(mpstate)

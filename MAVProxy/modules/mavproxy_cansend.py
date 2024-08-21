@@ -80,8 +80,42 @@ class CanSendModule(mp_module.MPModule):
                     print("Setup CANIDs Using canset command")
                     
                 else:
-                    data = self.decimal_to_padded_hex_array(int(args[1])) 
+                    data = self.decimal_to_padded_hex_array(int(args[1]), 'THROTTLE') 
                     can_id = self.throttleCANID  
+
+            if(args[0] == 'RUDDER'):
+                if (int(args[1]) < -90 or int(args[1]) > 90):
+                    print("Usage: cansend RUDDER [-90:90]")
+                    
+                elif self.rudderCANID == 0:
+                    print("Setup CANIDs Using canset command")
+                    
+                else:
+                    data = self.decimal_to_padded_hex_array(int(args[1]), 'RUDDER') 
+                    can_id = self.rudderCANID  
+
+            if(args[0] == 'GEAR'):
+                # if (int(args[1]) not in ('F','R','N')): #or int(args[1]) > 100):
+                #     print("Usage: cansend GEAR F/N/R")
+                    
+                # elif self.gearCANID == 0:
+                #     print("Setup CANIDs Using canset command")
+                    
+                # else:
+                #     data = self.decimal_to_padded_hex_array(int(ord(str(args[1])),10), 'GEAR') 
+                #     can_id = self.gearCANID  
+                gear = args[1].upper()
+                if gear not in ('F', 'R', 'N'):
+                    print("Usage: cansend GEAR F/N/R")
+                elif self.gearCANID == 0:
+                    print("Setup CANIDs Using canset command")
+                else:
+                    gear_map = {'F': 70, 'R': 82, 'N': 78}
+                    data = self.decimal_to_padded_hex_array(gear_map[gear], 'GEAR')
+                    can_id = self.gearCANID
+
+
+            
 
         if(can_id != 0): 
 
@@ -137,18 +171,84 @@ class CanSendModule(mp_module.MPModule):
                 print("Usage: canset [THROTTLE/RUDDER/GEAR] CANID")
                 return
         
-    def decimal_to_padded_hex_array(self,decimal_number):
+    def decimal_to_padded_hex_array(self,decimal_number,targetComponent):
+
+        # abs_dec = abs(decimal_number)
+        #  # Convert the decimal number to a hexadecimal string (without the '0x' prefix)
+        # hex_string = hex(abs_dec)[2:].upper()
+        #  # Fill in the array of 8 bytes with 0x00, except the LSB with actual data 
+        # hex_array = []
+
+        # if(targetComponent == 'RUDDER'):
+        #     # L	Set the DATA MSB to 11 
+        #     # R	Set the DATA MSB to 00
+        #     if(decimal_number > 0):
+        #         hex_array.append(int('0x11',16))
+                
+        #     else:
+        #         hex_array.append(int('0x00',16))
+
+        #  # range from 0 to 7 for a DATA of 8 bytes
+        # for i in range(7):
+        #     if( i == 6):
+        #         hex_array.append(int(hex_string,16))
+        #     else:
+        #         hex_array.append(int('0x00',16))
+        
+         # Check for target component to set the DATA MSB accordingly 
+        
+                
+            # Convert the decimal number to a hexadecimal string (without the '0x' prefix)
+            # hex_string = hex(decimal_number)[2:].upper()   
+            
+            # Pad the hex string to ensure it has at least 8 characters
+            # hex_string = hex_string.zfill(8)
+            
+            # Create a list of integers representing each hex digit with 0x prefix
+            #hex_array = [int(f'0x{digit}', 16) for digit in hex_string]
+            
+                
+        # return hex_array
+
+        abs_dec = abs(decimal_number)
+        
         # Convert the decimal number to a hexadecimal string (without the '0x' prefix)
-        hex_string = hex(decimal_number)[2:].upper()
+        hex_string = hex(abs_dec)[2:].upper().zfill(2)  # Ensure at least 2 characters for the smallest hex value
         
-        # Pad the hex string to ensure it has at least 8 characters
-        hex_string = hex_string.zfill(8)
+        # Initialize the hex_array with 0x00 values
+        hex_array = [0x00] * 8
+
+        # Set the MSB based on targetComponent and decimal_number
+        if targetComponent == 'RUDDER':
+            # Set the DATA MSB based on the sign of decimal_number
+            hex_array[0] = 0xFF if decimal_number < 0 else 0x00
+            # Ensure the last element of hex_array is set with actual data
+            hex_array[7] = int(hex_string,16)
+
+        elif targetComponent == 'THROTTLE':
+            #hex_array[0] = 0x00
+            # Ensure the last element of hex_array is set with actual data
+            hex_array[7] = int(hex_string,16)
+
+        elif targetComponent == 'GEAR':
+            # #hex_array[0] = 0x00
+            # # denoting FORWARD F
+            # if(abs_dec == 70): hex_array[7] = int('0x01',16)
+            # # denoting REVERSE R
+            # if(abs_dec == 82): hex_array[7] = int('0x02',16)
+            # # denoting NEUTRAL N
+            # if(abs_dec == 78): hex_array[7] = int('0x03',16)
+            gear_map = {70: 0x01, 82: 0x02, 78: 0x03}
+            if abs_dec in gear_map:
+                hex_array[7] = gear_map[abs_dec]
+            
         
-        # Create a list of integers representing each hex digit with 0x prefix
-        hex_array = [int(f'0x{digit}', 16) for digit in hex_string]
-        
+        # Ensure the last element of hex_array is set with actual data
+        #hex_array[7] = int(hex_string,16)
         
         return hex_array
+
+        
 
         
     # def update_gui(self):
